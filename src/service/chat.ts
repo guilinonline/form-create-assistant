@@ -554,7 +554,8 @@ ${userRule}`;
         vue: 'vue2',
       },
     } as { [key: string]: { ui: string; vue: 'vue2' | 'vue3' } };
-    return alias[ui] || alias['element-plus'];
+    // 未指定/未知 ui 时按部署默认栈(平台为 ant-design-vue,env 可配)
+    return alias[ui] || alias[process.env.DEFAULT_UI_FRAMEWORK || 'element-plus'] || alias['element-plus'];
   }
 
   /**

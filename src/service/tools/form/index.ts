@@ -4,7 +4,8 @@ import { ToolArgs, ToolContext, ToolRegistration, ValidateDetails } from '../typ
 import featuresMap, { features } from './features';
 
 // 常量定义
-const DEFAULT_UI_FRAMEWORK = 'element-plus';
+// 默认 UI 栈可配(平台为 ant-design-vue;部署 .env 设 DEFAULT_UI_FRAMEWORK)
+const DEFAULT_UI_FRAMEWORK = process.env.DEFAULT_UI_FRAMEWORK || 'element-plus';
 const DEFAULT_VUE_VERSION = 'vue3';
 const SUPPORTED_UI_FRAMEWORKS = ['element-plus', 'element-ui', 'ant-design-vue', 'vant'] as const;
 const SUPPORTED_VUE_VERSIONS = ['vue2', 'vue3', 'auto'] as const;
@@ -277,7 +278,8 @@ export const applyPatchFormRuleTool: ToolRegistration = {
 
     const data = request.context;
 
-    const results = applyJSONPatch(data.form.rule, jsonPatch as any);
+    // context.form 由入口层保证初始化(首次对话为空规则);双防御避免 undefined
+    const results = applyJSONPatch(data.form?.rule ?? [], jsonPatch as any);
 
     // 验证并改进规则
     const validateAndImproveResult = request.formGenerator.validateRule({ rule: results.newDocument }, uiFramework, request.componentRegistry);
