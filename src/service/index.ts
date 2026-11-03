@@ -90,18 +90,12 @@ app.post('/api/chat/completions', async (req: Request, res: Response) => {
   const params = { ...req.body };
 
   try {
-    // 从 Authorization header 获取 API 密钥
-    const authHeader = req.headers.authorization;
-    const apiKey =
-      authHeader && (authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader);
+    // 认证/Agent/模型全部由服务端 .env 指定死(2026-11-01 用户裁定):
+    // 设计器仅是交互端,请求体里的 agent/model/凭据一律不采信
+    const apiKey = process.env.DEFAULT_TOKEN || '';
 
-    if (!params.agent) {
-      params.agent = process.env.DEFAULT_AGENT || 'deepseek';
-    }
-
-    if (!params.model) {
-      params.model = process.env.DEFAULT_MODEL || 'deepseek-flash';
-    }
+    params.agent = process.env.DEFAULT_AGENT || 'deepseek';
+    params.model = process.env.DEFAULT_MODEL || 'deepseek-flash';
 
     if (params.form && params.form.rule) {
       params.context = { form: { rule: JSON.parse(params.form.rule) } };
