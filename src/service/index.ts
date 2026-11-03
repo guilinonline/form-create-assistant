@@ -29,6 +29,21 @@ if (dotenvResult.error) {
 const app: Express = express();
 const port = Number(process.env.PORT) || 3001;
 
+// ===== 访问守卫配置(双因子:可信来源 IP + 共享密钥,流程引擎 X-Internal-Token 同款)=====
+// 可信来源 IP 白名单(逗号分隔):平台代理所在主机;IPv6 映射前缀(::ffff:)自动归一
+const TRUSTED_IPS = (process.env.TRUSTED_IPS || '127.0.0.1,::1')
+  .split(',')
+  .map((s) => s.trim().replace(/^::ffff:/, ''));
+// 共享密钥:与平台代理(FORM_ASSISTANT_TOKEN)一致;未配置=拒绝所有对话请求
+const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN || '';
+
+function isTrustedRequest(req: { socket: { remoteAddress?: string }; headers: Record<string, unknown> }): boolean {
+  const ip = (req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+  if (!TRUSTED_IPS.includes(ip)) return false;
+  if (!INTERNAL_TOKEN) return false; // 未配置密钥=拒绝(硬性,防裸奔部署)
+  return req.headers['x-assistant-token'] === INTERNAL_TOKEN;
+}
+
 // 获取当前文件的目录路径
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,8 +78,15 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
-// OpenAI Chat Completions API 接口
-app.post('/api/chat/completions', async (req: Request, res: Response) => {
+// OpenAI Chat Completions API 接口(访问守卫:可信 IP+共享密钥双因子)
+app.post('/api/chat/completions', (req: Request, res: Response, next) => {
+  if (!isTrustedRequest(req)) {
+    console.warn(`🚫 拒绝来自不可信来源的请求: ${req.socket.remoteAddress}`);
+    res.status(403).json({ code: 403, message: 'forbidden' });
+    return;
+  }
+  next();
+}, async (req: Request, res: Response) => {
   // 流式响应
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
