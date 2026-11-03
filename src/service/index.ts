@@ -27,7 +27,7 @@ if (dotenvResult.error) {
 }
 
 const app: Express = express();
-const port = process.env.PORT || 3001;
+const port = Number(process.env.PORT) || 3001;
 
 // 获取当前文件的目录路径
 const __filename = fileURLToPath(import.meta.url);
@@ -207,7 +207,9 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 // 启动服务器
-app.listen(port, () => {
+// 监听地址可配(部署建议 127.0.0.1:仅本机/平台代理可达,不对外)
+const host = process.env.HOST || '0.0.0.0';
+app.listen(port, host, () => {
   console.log('🚀 业务表单AI助理已启动');
   console.log(`📡 服务器地址: http://localhost:${port}`);
   console.log(`❤️ 健康检查: http://localhost:${port}/api/health`);
